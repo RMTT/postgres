@@ -25,6 +25,8 @@
 #include "executor/tuptable.h"
 #include "storage/dsm.h"
 #include "utils/relcache.h"
+#include "utils/elog.h"
+#include "access/nbtree.h"
 
 
 /*
