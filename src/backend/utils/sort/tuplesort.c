@@ -3252,7 +3252,7 @@ static void sort_bounded_heap(Tuplesortstate *state) {
 }
 
 void cuda_sort(SortTuple *, int);
-void cuda_sort_int(int *, int);
+void cuda_sort_int(int *, SortTuple *, int);
 /*
  * Sort all memtuples using specialized qsort() routines.
  *
@@ -3260,18 +3260,22 @@ void cuda_sort_int(int *, int);
  */
 static void tuplesort_sort_memtuples(Tuplesortstate *state) {
   Assert(!LEADER(state));
-  int i, *data;
+  int i, *data, *index, p, temp_data, nxt_i;
   if (state->memtupcount > 1) {
     if (state->nKeys == 1 &&
         (state->tupDesc->attrs[state->sortKeys->ssup_attno - 1].atttypid ==
          INT4OID)) {
-      cuda_sort(state->memtuples, state->memtupcount);
+      // cuda_sort(state->memtuples, state->memtupcount);
 
-      //data = palloc(sizeof(int) * state->memtupcount);
-      //for (i = 0; i < state->memtupcount; i++) {
-      //  data[i] = DatumGetInt32(state->memtuples[i].datum1);
-      //}
-      //cuda_sort_int(data, state->memtupcount);
+      data = palloc(sizeof(int) * state->memtupcount);
+      index = palloc(sizeof(int) * state->memtupcount);
+
+      for (i = 0; i < state->memtupcount; i++) {
+        index[i] = i;
+        data[i] = DatumGetInt32(state->memtuples[i].datum1);
+      }
+      cuda_sort_int(data, state->memtuples, state->memtupcount);
+
       return;
     }
 

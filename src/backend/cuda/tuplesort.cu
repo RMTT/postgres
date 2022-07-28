@@ -1,6 +1,7 @@
 #include "stdint.h"
 #include <thrust/sort.h>
 #include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
 #include <cstring>
 
 struct SortTuple {
@@ -23,9 +24,12 @@ void cuda_sort(SortTuple *memtuples, int length) {
   thrust::copy(tuples.begin(), tuples.end(), memtuples);
 }
 
+void cuda_sort_int(int *data,SortTuple *index, int length) {
+  thrust::device_vector<int> d_array(data, data + length);
+  thrust::device_vector<SortTuple> d_index(index, index + length);
 
-void cuda_sort_int(int *data, int length) {
-    thrust::device_vector<unsigned int> d_array(data, data + length);
-    thrust::sort(thrust::device, d_array.begin(), d_array.end());
+  thrust::sort_by_key(thrust::device, d_array.begin(), d_array.end(), d_index.begin());
+
+  thrust::copy(d_index.begin(), d_index.end(), index);
 }
 }
