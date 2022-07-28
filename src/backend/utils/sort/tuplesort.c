@@ -93,6 +93,7 @@
  */
 
 #include "postgres.h"
+#include "utils/elog.h"
 #include "utils/tuplesort.h"
 
 #include <limits.h>
@@ -3250,24 +3251,8 @@ static void sort_bounded_heap(Tuplesortstate *state) {
   state->boundUsed = true;
 }
 
-__global__ void device_sort(void *, int) {}
-
-void cuda_sort(Tuplesortstate *state) {
-  int i;
-  int length = state->memtupcount;
-  int *data = palloc(sizeof(int) * length);
-  void **tuple_data = palloc(4 * length);
-  bool *isnull_data = palloc(sizeof(bool) * length);
-  int *srctape_data = palloc(sizeof(int) * length);
-
-  for (i = 0; i < length; i++) {
-		*(tuple_data + i) = state->memtuples[i].tuple;
-		*(data + i) = DatumGetInt32(state->memtuples[i].datum1);
-		*(isnull_data + i) = state->memtuples[i].isnull1;
-		*(srctape_data + i) = state->memtuples[i].srctape;
-  }
-}
-
+void cuda_sort(SortTuple *, int);
+void cuda_sort_int(int *, int);
 /*
  * Sort all memtuples using specialized qsort() routines.
  *
@@ -3275,20 +3260,27 @@ void cuda_sort(Tuplesortstate *state) {
  */
 static void tuplesort_sort_memtuples(Tuplesortstate *state) {
   Assert(!LEADER(state));
-
+  int i, *data;
   if (state->memtupcount > 1) {
     if (state->nKeys == 1 &&
-        (state->tupDesc->attrs[state->sortKeys->ssup_attno].atttypid ==
+        (state->tupDesc->attrs[state->sortKeys->ssup_attno - 1].atttypid ==
          INT4OID)) {
-      cuda_sort(state);
-    } else {
-      /* Can we use the single-key sort function? */
-      if (state->onlyKey != NULL)
-        qsort_ssup(state->memtuples, state->memtupcount, state->onlyKey);
-      else
-        qsort_tuple(state->memtuples, state->memtupcount, state->comparetup,
-                    state);
+      cuda_sort(state->memtuples, state->memtupcount);
+
+      //data = palloc(sizeof(int) * state->memtupcount);
+      //for (i = 0; i < state->memtupcount; i++) {
+      //  data[i] = DatumGetInt32(state->memtuples[i].datum1);
+      //}
+      //cuda_sort_int(data, state->memtupcount);
+      return;
     }
+
+    /* Can we use the single-key sort function? */
+    if (state->onlyKey != NULL)
+      qsort_ssup(state->memtuples, state->memtupcount, state->onlyKey);
+    else
+      qsort_tuple(state->memtuples, state->memtupcount, state->comparetup,
+                  state);
   }
 }
 

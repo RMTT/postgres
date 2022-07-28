@@ -323,6 +323,9 @@ RANLIB = @RANLIB@
 WINDRES = @WINDRES@
 X = @EXEEXT@
 
+# CUDA
+LDFLAGS += -L/opt/cuda/targets/x86_64-linux/lib -lcudart -lstdc++
+
 # Perl
 
 ifneq (@PERL@,)
